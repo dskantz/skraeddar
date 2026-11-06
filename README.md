@@ -11,6 +11,8 @@ Need to create a specific pegboard for 3D Printing? Use the Skräddar generator 
 * set custom width, height and thickness of the pegboard
 * export as .stl for your 3D Print
 * Select, if you want holes for mounting the pegboard (with spacers)
+* Round the outer board edges and every hole on both sides with configurable fillets (default 2 mm each)
+* Split large boards into printable parts (default max 240 × 240 mm) joined by dovetail seams that weave between the pegboard holes, with adjustable joint clearance. Export as a .zip with one STL per part, or as one STL with every part as a separate body
 
 ## Preview
 ![skraedda_preview](https://github.com/user-attachments/assets/1c763fbe-fbe2-40d7-ba89-f8b41f4c6be4)
