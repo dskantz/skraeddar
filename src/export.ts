@@ -55,6 +55,44 @@ export const geometriesToBinaryStl = (header: string, items: PlacedGeometry[]): 
   return bytes;
 };
 
+/** Builds a 3MF package with each geometry as a separate build item. */
+export const geometriesToThreeMf = (items: PlacedGeometry[]): Blob => {
+  const objects = items.map(({ geometry, dx, dy }, itemIndex) => {
+    const position = geometry.attributes.position;
+    const index = geometry.index;
+    const vertexCount = position.count;
+    const triangleCount = index ? index.count / 3 : vertexCount / 3;
+    const vertices = Array.from({ length: vertexCount }, (_, vertexIndex) => {
+      const x = position.getX(vertexIndex) + dx;
+      const y = position.getY(vertexIndex) + dy;
+      const z = position.getZ(vertexIndex);
+      return `<vertex x="${x}" y="${y}" z="${z}"/>`;
+    }).join('');
+    const triangles = Array.from({ length: triangleCount }, (_, triangleIndex) => {
+      const vertexIndex = triangleIndex * 3;
+      const v1 = index ? index.getX(vertexIndex) : vertexIndex;
+      const v2 = index ? index.getX(vertexIndex + 1) : vertexIndex + 1;
+      const v3 = index ? index.getX(vertexIndex + 2) : vertexIndex + 2;
+      return `<triangle v1="${v1}" v2="${v2}" v3="${v3}"/>`;
+    }).join('');
+    const id = itemIndex + 1;
+    return {
+      id,
+      xml: `<object id="${id}" type="model" name="Part ${id}"><mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh></object>`
+    };
+  });
+
+  const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><resources>${objects.map(({ xml }) => xml).join('')}</resources><build>${objects.map(({ id }) => `<item objectid="${id}"/>`).join('')}</build></model>`;
+  const contentTypes = '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>';
+  const relationships = '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>';
+
+  return createZip([
+    { name: '[Content_Types].xml', content: contentTypes },
+    { name: '_rels/.rels', content: relationships },
+    { name: '3D/3dmodel.model', content: model }
+  ]);
+};
+
 const crcTable = (() => {
   const table = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {

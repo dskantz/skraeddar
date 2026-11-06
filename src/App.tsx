@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { createZip, downloadBlob, geometriesToBinaryStl } from './export';
+import { createZip, downloadBlob, geometriesToBinaryStl, geometriesToThreeMf } from './export';
 import {
   BoardPart,
   MAX_CORNER_CHAMFER,
@@ -25,7 +25,7 @@ const SkadisGenerator = () => {
   const [maxPartWidth, setMaxPartWidth] = useState(240);
   const [maxPartHeight, setMaxPartHeight] = useState(240);
   const [clearance, setClearance] = useState(0.2);
-  const [exportMode, setExportMode] = useState<'zip' | 'single'>('zip');
+  const [exportMode, setExportMode] = useState<'zip' | '3mf'>('zip');
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -226,19 +226,18 @@ const SkadisGenerator = () => {
       return;
     }
 
-    // Single STL: keep the assembled grid order but space the parts apart so they are separate bodies.
+    // Keep the assembled grid order while placing each part as a separate 3MF object.
     const PART_SPACING = 10;
     const cellW = Math.max(...layout.parts.map((p) => p.bbox.maxX - p.bbox.minX)) + PART_SPACING;
     const cellH = Math.max(...layout.parts.map((p) => p.bbox.maxY - p.bbox.minY)) + PART_SPACING;
-    const stl = geometriesToBinaryStl(
-      'skadis_pegboard_parts',
+    const threeMf = geometriesToThreeMf(
       layout.parts.map((part) => ({
         geometry: build(part),
         dx: part.col * cellW - part.bbox.minX,
         dy: part.row * cellH - part.bbox.minY
       }))
     );
-    downloadBlob(stlBlob(stl), `${baseName}_${layout.parts.length}_parts.stl`);
+    downloadBlob(threeMf, `${baseName}_${layout.parts.length}_parts.3mf`);
   };
 
   const generateSpacerSTL = () => {
@@ -554,11 +553,11 @@ const SkadisGenerator = () => {
                       <input
                         type="radio"
                         name="exportMode"
-                        checked={exportMode === 'single'}
-                        onChange={() => setExportMode('single')}
+                        checked={exportMode === '3mf'}
+                        onChange={() => setExportMode('3mf')}
                         className="accent-black"
                       />
-                      One STL, each part a separate body
+                      One 3MF, each part a separate object
                     </label>
                   </fieldset>
 
